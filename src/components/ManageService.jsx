@@ -15,6 +15,7 @@ export default function ManageService() {
     require_doctor: false,
     allow_walkin: true,
     doctorIds: [],
+    is_live: false, // 🔥 NEW FLAG
   });
 
   const [doctorsList, setDoctorsList] = useState([]);
@@ -29,7 +30,6 @@ export default function ManageService() {
       setServices(serviceData);
 
       const { data: doctorRes } = await axios.get(DOCTOR_URL);
-      // Jika API langsung mengembalikan array doctor
       if (Array.isArray(doctorRes)) {
         setDoctorsList(doctorRes);
       } else if (doctorRes.success && Array.isArray(doctorRes.data)) {
@@ -53,16 +53,14 @@ export default function ManageService() {
     const { name, value, type, checked } = e.target;
     setForm({
       ...form,
-      [name]:
-        type === "checkbox" ? checked : type === "number" ? Number(value) : value,
+      [name]: type === "checkbox" ? checked : type === "number" ? Number(value) : value,
     });
   };
 
   const toggleDoctor = (id) => {
     setForm((prev) => {
       const exists = prev.doctorIds.includes(id);
-      if (exists)
-        return { ...prev, doctorIds: prev.doctorIds.filter((d) => d !== id) };
+      if (exists) return { ...prev, doctorIds: prev.doctorIds.filter((d) => d !== id) };
       return { ...prev, doctorIds: [...prev.doctorIds, id] };
     });
   };
@@ -72,9 +70,7 @@ export default function ManageService() {
     try {
       if (isEditing) {
         const { data } = await axios.put(`${API_URL}/${form.id}`, form);
-        setServices((prev) =>
-          prev.map((s) => (s.id === data.id ? data : s))
-        );
+        setServices((prev) => prev.map((s) => (s.id === data.id ? data : s)));
         setIsEditing(false);
       } else {
         const { data } = await axios.post(API_URL, form);
@@ -96,6 +92,7 @@ export default function ManageService() {
       require_doctor: false,
       allow_walkin: true,
       doctorIds: [],
+      is_live: false, // reset
     });
     setIsEditing(false);
   };
@@ -109,8 +106,9 @@ export default function ManageService() {
       duration_minutes: service.duration_minutes || "",
       price: service.price || "",
       require_doctor: service.require_doctor || false,
-      allow_walkin: service.allow_walkin || true,
+      allow_walkin: service.allow_walkin,
       doctorIds: service.doctorIds || [],
+      is_live: service.is_live || false, // load flag
     });
     setIsEditing(true);
   };
@@ -184,6 +182,7 @@ export default function ManageService() {
               />
               Butuh Dokter
             </label>
+
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -195,6 +194,18 @@ export default function ManageService() {
               Bisa Walk-in
             </label>
           </div>
+
+          {/* NEW FIELD */}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="is_live"
+              checked={form.is_live}
+              onChange={handleChange}
+              className="h-5 w-5"
+            />
+            Layanan Video Call (Live Session)
+          </label>
 
           {form.require_doctor && (
             <button
@@ -234,12 +245,15 @@ export default function ManageService() {
               Durasi: {s.duration_minutes} menit
             </p>
             <p className="text-sm text-gray-500">Harga: Rp{s.price}</p>
+
             <p className="text-sm text-green-600">
               {s.require_doctor ? "Butuh Dokter" : "Tidak Butuh Dokter"}
             </p>
-            <p className="text-sm text-green-600">
-              {s.allow_walkin ? "Bisa Walk-in" : "Tidak Bisa Walk-in"}
+
+            <p className="text-sm text-purple-600">
+              {s.is_live ? "Video Call" : "Layanan Normal"}
             </p>
+
             <div className="flex justify-end gap-3 mt-3">
               <button
                 onClick={() => handleEdit(s)}
@@ -259,7 +273,7 @@ export default function ManageService() {
       </div>
 
       {/* Floating Add Button */}
-      {!isEditing && (
+      {isEditing && (
         <button
           onClick={resetForm}
           className="fixed bottom-8 right-8 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex justify-center items-center text-2xl hover:bg-blue-700 transition"

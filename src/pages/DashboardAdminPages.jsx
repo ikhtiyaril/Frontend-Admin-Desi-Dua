@@ -4,6 +4,10 @@ import BookingMonitoring from '../components/BookingMonitoring';
 import ManageDoctorForm from '../components/ManageDoctorForm';
 import ManageBlockedTime from '../components/ManageBlockedTime';
 import ManageDoctorSchedule from '../components/ManageDoctorSchedule';
+import MedicineManager from '../components/MedicineManager';
+import ManageCategory from '../components/ManageCategory';
+import ManageOrder from '../components/ManageOrder';
+import ManageArticle from '../components/ManageArticle';
 
 export default function DashboardAdminPages() {
   const [activePage, setActivePage] = useState('ManageService');
@@ -14,6 +18,15 @@ export default function DashboardAdminPages() {
     { key: 'ManageDoctorForm', label: 'Manage Doctor' },
     { key: 'ManageBlockedTime', label: 'Manage Blocked Time' },
     { key: 'ManageDoctorSchedule', label: 'Manage Doctor Schedule' },
+    { key: 'ManageMedicine', label: 'Manage Medicine' },
+    { key: 'ManageCategory', label: 'Manage Category' },
+    { key: 'ManageOrder', label: 'Manage Order' },
+    { key: 'ManageArticle', label: 'Manage Article' },
+
+
+
+
+
 
 
 
@@ -31,6 +44,14 @@ export default function DashboardAdminPages() {
           return <ManageBlockedTime/>
           case 'ManageDoctorSchedule':
           return <ManageDoctorSchedule/>
+           case 'ManageMedicine':
+          return <MedicineManager/>
+           case 'ManageCategory':
+          return <ManageCategory/>
+           case 'ManageOrder':
+          return <ManageOrder/>
+          case 'ManageArticle':
+          return <ManageArticle/>
       default:
         return <ManageService />;
     }
