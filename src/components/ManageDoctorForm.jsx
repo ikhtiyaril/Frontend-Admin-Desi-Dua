@@ -17,6 +17,7 @@ export default function ManageDoctor() {
   });
   const [doctors, setDoctors] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [file,setFile] = useState(null)
   const API_URL = import.meta.env.VITE_API_URL; // dari .env
 
   // Fetch semua dokter
@@ -39,40 +40,77 @@ export default function ManageDoctor() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (isEditing) {
-        const res = await axios.put(`${API_URL}/api/doctor/${form.id}`, form);
-        if (res.data.success) {
-          setDoctors((prev) => prev.map((d) => (d.id === form.id ? res.data.data : d)));
-          setIsEditing(false);
-        }
-      } else {
-        const res = await axios.post(`${API_URL}/api/doctor`, form);
-        if (res.data.success) {
-          setDoctors((prev) => [...prev, res.data.data]);
-        }
+  e.preventDefault();
+
+  try {
+    const fd = new FormData();
+    fd.append("name", form.name);
+    fd.append("email", form.email);
+    fd.append("phone", form.phone);
+    fd.append("specialization", form.specialization);
+    fd.append("bio", form.bio);
+    fd.append("isActive", form.isActive);
+
+    if (file) {
+      fd.append("avatar", file);
+    }
+
+    let res;
+
+    if (isEditing) {
+      res = await axios.put(`${API_URL}/api/doctor/${form.id}`, fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (res.data.success) {
+        setDoctors((prev) =>
+          prev.map((d) => (d.id === form.id ? res.data.data : d))
+        );
+        setIsEditing(false);
       }
 
-      setForm({
-        id: null,
-        name: "",
-        email: "",
-        phone: "",
-        specialization: "",
-        bio: "",
-        avatar: "",
-        isActive: true,
+    } else {
+      res = await axios.post(`${API_URL}/api/doctor`, fd, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
-    } catch (err) {
-      console.error("Error submit doctor:", err);
+
+      if (res.data.success) {
+        setDoctors((prev) => [...prev, res.data.data]);
+      }
     }
-  };
+
+    setForm({
+      id: null,
+      name: "",
+      email: "",
+      phone: "",
+      specialization: "",
+      bio: "",
+      avatar: "",
+      isActive: true,
+    });
+    setFile(null);
+
+  } catch (err) {
+    console.error("Form submit error:", err);
+  }
+};
 
   const handleEdit = (doctor) => {
-    setForm(doctor);
-    setIsEditing(true);
-  };
+  setForm({
+    id: doctor.id,
+    name: doctor.name,
+    email: doctor.email,
+    phone: doctor.phone,
+    specialization: doctor.specialization,
+    bio: doctor.bio,
+    avatar: doctor.avatar,
+    isActive: doctor.isActive,
+  });
+  setFile(null);
+  setIsEditing(true);
+};
+
 
   const handleDelete = async (id) => {
     if (!window.confirm("Yakin mau hapus dokter ini?")) return;
@@ -86,6 +124,18 @@ export default function ManageDoctor() {
     }
   };
 
+  const handleFile = (e)=>{
+const f = e.target.files[0]
+
+if(!f)return
+
+if(f.size > 3*1000*1000 ){
+ alert("File too large. Max 3MB allowed.");
+      e.target.value = "";
+      return;
+}
+setFile(f)
+  }
   return (
     <div className="min-h-screen bg-blue-50 p-6">
       <div className="max-w-2xl mx-auto">
@@ -105,8 +155,11 @@ export default function ManageDoctor() {
               className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500" />
             <textarea name="bio" value={form.bio} onChange={handleChange} placeholder="Bio Dokter"
               className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500"></textarea>
-            <input type="text" name="avatar" value={form.avatar} onChange={handleChange} placeholder="Link foto/avatar"
+
+            <input type="file" name="avatar" onChange={handleFile} placeholder="Link foto/avatar"
               className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500" />
+
+
             <label className="flex items-center gap-2">
               <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} className="h-5 w-5" />
               <span>Status Aktif</span>

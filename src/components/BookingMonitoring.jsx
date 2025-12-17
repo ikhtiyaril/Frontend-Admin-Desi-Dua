@@ -134,7 +134,7 @@ export default function BookingMonitoring() {
             {/* INFO */}
             <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
               <p><span className="font-semibold">Patient:</span> {item.patient?.name}</p>
-              <p><span className="font-semibold">Service:</span> {item.service?.name}</p>
+              <p><span className="font-semibold">Service:</span> {item.Service?.name}</p>
               <p><span className="font-semibold">Doctor:</span> {item.doctor?.name || "-"}</p>
               <p><span className="font-semibold">Date:</span> {item.date}</p>
               <p><span className="font-semibold">Time:</span> {item.time_start} - {item.time_end}</p>

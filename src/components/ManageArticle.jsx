@@ -1,198 +1,225 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import EditorJS from "@editorjs/editorjs";
 import Header from "@editorjs/header";
 import List from "@editorjs/list";
-import ImageTool from "@editorjs/image";
 import Paragraph from "@editorjs/paragraph";
+import ImageTool from "@editorjs/image";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL || "";
 
 export default function ManageArticle() {
-  const [articles, setArticles] = useState([]);
-  const [title, setTitle] = useState("");
   const editorRef = useRef(null);
-  const isEditorReady = useRef(false);
+  const ejInstance = useRef(null);
 
-  // Load all articles
-  const loadArticles = async () => {
-    try {
-      const res = await axios.get(`${API}/api/posts`);
-      setArticles(res.data.data);
-    } catch (error) {
-      console.error("Load failed:", error);
-    }
-  };
+  const [articles, setArticles] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  // Initialize EditorJS
+  const [title, setTitle] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+
+  /* ================= INIT EDITOR.JS ================= */
   useEffect(() => {
-    if (isEditorReady.current) return;
-    isEditorReady.current = true;
+    if (!editorRef.current || ejInstance.current) return;
 
-    const initEditor = async () => {
-      const editor = new EditorJS({
-        holder: "editorjs",
-        autofocus: true,
-        placeholder: "Write article here...",
-        tools: {
-          paragraph: {
-            class: Paragraph,
-            inlineToolbar: true,
+    ejInstance.current = new EditorJS({
+      holder: editorRef.current,
+      autofocus: true,
+      placeholder: "Write your article here…",
+      tools: {
+        header: {
+          class: Header,
+          inlineToolbar: true,
+          config: {
+            levels: [2, 3, 4],
+            defaultLevel: 3,
           },
-          header: {
-            class: Header,
-            inlineToolbar: true,
-          },
-          list: {
-            class: List,
-            inlineToolbar: true,
-          },
-          image: {
-            class: ImageTool,
-            config: {
-              uploader: {
-                uploadByFile: async (file) => {
-                  try {
-                    const formData = new FormData();
-                    formData.append("image", file);
+        },
+        paragraph: {
+          class: Paragraph,
+          inlineToolbar: true,
+        },
+        list: {
+          class: List,
+          inlineToolbar: true,
+        },
+        image: {
+          class: ImageTool,
+          config: {
+            uploader: {
+              async uploadByFile(file) {
+                const formData = new FormData();
+                formData.append("image", file);
 
-                    const token = localStorage.getItem("token");
-
-                    const res = await axios.post(`${API}/api/posts/upload`, formData, {
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "multipart/form-data",
-                      },
-                    });
-console.log("Full response:", res.data);
-console.log("File object:", res.data.file);
-console.log("Image URL:", res.data.file.url);
-
-
-                    return { success: 1, file: { url:res.data.file.url } };
-                  } catch (err) {
-                    console.error("Image upload failed:", err);
-                    return { success: 0 };
+                const token = localStorage.getItem("token");
+                const res = await axios.post(
+                  `${API}/api/posts/upload`,
+                  formData,
+                  {
+                    headers: {
+                      Authorization: token ? `Bearer ${token}` : "",
+                      "Content-Type": "multipart/form-data",
+                    },
                   }
-                },
+                );
+
+                const url = res?.data?.file?.url || res?.data?.url;
+                return {
+                  success: 1,
+                  file: { url },
+                };
               },
             },
           },
         },
-      });
-
-      editorRef.current = editor;
-    };
-
-    initEditor();
+      },
+    });
 
     return () => {
-      if (editorRef.current?.destroy) {
-        editorRef.current.destroy();
-        editorRef.current = null;
-      }
-    };
+  if (typeof ejInstance.current?.destroy === "function") {
+    ejInstance.current.destroy();
+    ejInstance.current = null;
+  }
+};
+
   }, []);
 
-  // Submit article
-  const submitArticle = async () => {
-    try {
-      if (!title.trim()) {
-        alert("Title cannot be empty");
-        return;
-      }
-
-      const editorData = await editorRef.current.save();
-
-      // Filter out empty paragraph blocks
-      const cleanBlocks = editorData.blocks.filter((block) => {
-        if (block.type === "paragraph") {
-          return block.data?.text?.trim() !== "";
-        }
-        return true;
-      });
-
-      if (cleanBlocks.length === 0) {
-        alert("Please add some content");
-        return;
-      }
-
-      const cleanData = { ...editorData, blocks: cleanBlocks };
-      const token = localStorage.getItem("token"); // ambil token login
-
-      await axios.post(
-        `${API}/api/posts`,
-        {
-          title,
-          content: JSON.stringify(cleanData),
-          status: "published",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      setTitle("");
-      editorRef.current.clear();
-      loadArticles();
-      alert("Article Published!");
-    } catch (error) {
-      console.error("Submit failed:", error);
-      alert("Failed to publish article. Check console.");
-    }
-  };
-
+  /* ================= LOAD DATA ================= */
   useEffect(() => {
     loadArticles();
+    loadCategories();
   }, []);
 
+  const loadArticles = async () => {
+    const res = await axios.get(`${API}/api/posts`);
+    setArticles(res.data.data || []);
+  };
+
+  const loadCategories = async () => {
+    const res = await axios.get(`${API}/api/categories`);
+    setCategories(res.data.data || []);
+  };
+
+  /* ================= THUMBNAIL PREVIEW ================= */
+  useEffect(() => {
+    if (!thumbnailFile) return setThumbnailPreview(null);
+    const url = URL.createObjectURL(thumbnailFile);
+    setThumbnailPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [thumbnailFile]);
+
+  const uploadThumbnail = async () => {
+    if (!thumbnailFile) return null;
+
+    const formData = new FormData();
+    formData.append("image", thumbnailFile);
+    const token = localStorage.getItem("token");
+
+    const res = await axios.post(`${API}/api/posts/upload`, formData, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return res?.data?.file?.url || res?.data?.url || null;
+  };
+
+  /* ================= SUBMIT ================= */
+  const submitArticle = async () => {
+    if (!title.trim()) return alert("Title is required");
+
+    const content = await ejInstance.current.save();
+    if (!content.blocks.length) return alert("Content is empty");
+
+    const thumbnailUrl = await uploadThumbnail();
+    const token = localStorage.getItem("token");
+
+    const payload = {
+      title,
+      excerpt,
+      category_id: categoryId || null,
+      thumbnail: thumbnailUrl,
+      content: content,
+      status: "published",
+    };
+
+    await axios.post(`${API}/api/posts`, payload, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+    });
+
+    setTitle("");
+    setExcerpt("");
+    setCategoryId("");
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    ejInstance.current.clear();
+
+    await loadArticles();
+    alert("Article published 🚀");
+  };
+
   return (
-    <div className="p-10 max-w-5xl mx-auto">
+    <div className="p-8 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Manage Articles</h1>
 
-      {/* Article List */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold mb-3">Existing Articles</h2>
-        <div className="space-y-3">
-          {articles.length > 0 ? (
-            articles.map((a) => (
-              <div key={a.id} className="border p-4 rounded bg-white shadow-sm">
-                <h3 className="font-semibold">{a.title}</h3>
-                <p className="text-gray-600 text-sm">{a.excerpt ?? "No excerpt"}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No articles yet.</p>
+      <section className="mb-10">
+        <div className="grid gap-4">
+          <input
+            className="border px-3 py-2 rounded"
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+
+          <textarea
+            rows={3}
+            className="border px-3 py-2 rounded"
+            placeholder="Excerpt"
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+          />
+
+          <select
+            className="border px-3 py-2 rounded"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+          >
+            <option value="">-- Select category --</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setThumbnailFile(e.target.files?.[0])}
+          />
+
+          {thumbnailPreview && (
+            <img src={thumbnailPreview} className="h-32 rounded" />
           )}
+
+          <div className="border rounded p-4 bg-white">
+            <div ref={editorRef} />
+          </div>
+
+          <button
+            onClick={submitArticle}
+            className="bg-blue-600 text-white px-5 py-2 rounded"
+          >
+            Publish
+          </button>
         </div>
-      </div>
-
-      <hr className="my-10" />
-
-      {/* Create Article Form */}
-      <h2 className="text-xl font-semibold mb-3">Create New Article</h2>
-
-      <input
-        className="border p-2 w-full mb-4 rounded"
-        placeholder="Article Title..."
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-
-      <div
-        id="editorjs"
-        className="border p-4 bg-white rounded shadow-sm min-h-[300px]"
-      ></div>
-
-      <button
-        onClick={submitArticle}
-        className="mt-5 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded"
-      >
-        Publish Article
-      </button>
+      </section>
     </div>
   );
 }

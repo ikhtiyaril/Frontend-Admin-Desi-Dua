@@ -1,46 +1,20 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaTrash, FaEdit, FaPlus } from "react-icons/fa";
+import FloatingFormService from "./FloatingFormService";
 
 export default function ManageService() {
   const API_URL = `${import.meta.env.VITE_API_URL}/api/service`;
-  const DOCTOR_URL = `${import.meta.env.VITE_API_URL}/api/doctor`;
-
-  const [form, setForm] = useState({
-    id: null,
-    name: "",
-    description: "",
-    duration_minutes: "",
-    price: "",
-    require_doctor: false,
-    allow_walkin: true,
-    doctorIds: [],
-    is_live: false, // 🔥 NEW FLAG
-  });
-
-  const [doctorsList, setDoctorsList] = useState([]);
   const [services, setServices] = useState([]);
-  const [showDoctorModal, setShowDoctorModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingData, setEditingData] = useState(null);
 
-  // ====================== FETCH SERVICES & DOCTORS ======================
   const fetchServices = async () => {
     try {
-      const { data: serviceData } = await axios.get(API_URL);
-      setServices(serviceData);
-
-      const { data: doctorRes } = await axios.get(DOCTOR_URL);
-      if (Array.isArray(doctorRes)) {
-        setDoctorsList(doctorRes);
-      } else if (doctorRes.success && Array.isArray(doctorRes.data)) {
-        setDoctorsList(doctorRes.data);
-      } else {
-        console.error("Response doctor tidak valid:", doctorRes);
-        setDoctorsList([]);
-      }
+      const { data } = await axios.get(API_URL);
+      setServices(data);
     } catch (err) {
-      console.error("Gagal fetch services/doctor:", err);
-      setDoctorsList([]);
+      console.error(err);
     }
   };
 
@@ -48,296 +22,199 @@ export default function ManageService() {
     fetchServices();
   }, []);
 
-  // ====================== HANDLE FORM ======================
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "checkbox" ? checked : type === "number" ? Number(value) : value,
-    });
-  };
-
-  const toggleDoctor = (id) => {
-    setForm((prev) => {
-      const exists = prev.doctorIds.includes(id);
-      if (exists) return { ...prev, doctorIds: prev.doctorIds.filter((d) => d !== id) };
-      return { ...prev, doctorIds: [...prev.doctorIds, id] };
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (isEditing) {
-        const { data } = await axios.put(`${API_URL}/${form.id}`, form);
-        setServices((prev) => prev.map((s) => (s.id === data.id ? data : s)));
-        setIsEditing(false);
-      } else {
-        const { data } = await axios.post(API_URL, form);
-        setServices((prev) => [...prev, data]);
-      }
-      resetForm();
-    } catch (err) {
-      console.error("Gagal submit service:", err);
-    }
-  };
-
-  const resetForm = () => {
-    setForm({
-      id: null,
-      name: "",
-      description: "",
-      duration_minutes: "",
-      price: "",
-      require_doctor: false,
-      allow_walkin: true,
-      doctorIds: [],
-      is_live: false, // reset
-    });
-    setIsEditing(false);
-  };
-
-  // ====================== EDIT ======================
-  const handleEdit = (service) => {
-    setForm({
-      id: service.id,
-      name: service.name || "",
-      description: service.description || "",
-      duration_minutes: service.duration_minutes || "",
-      price: service.price || "",
-      require_doctor: service.require_doctor || false,
-      allow_walkin: service.allow_walkin,
-      doctorIds: service.doctorIds || [],
-      is_live: service.is_live || false, // load flag
-    });
-    setIsEditing(true);
-  };
-
-  // ====================== DELETE ======================
   const handleDelete = async (id) => {
     if (!window.confirm("Yakin mau hapus layanan ini?")) return;
     try {
       await axios.delete(`${API_URL}/${id}`);
       setServices((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
-      console.error("Gagal hapus service:", err);
+      console.error(err);
     }
   };
 
+  const handleFormSubmit = async (formData) => {
+    if (editingData) {
+      // EDIT
+      try {
+        const { data } = await axios.put(`${API_URL}/${editingData.id}`, formData);
+        setServices((prev) => prev.map((s) => (s.id === data.id ? data : s)));
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      // ADD
+      try {
+        const { data } = await axios.post(API_URL, formData);
+        setServices((prev) => [...prev, data]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    setEditingData(null);
+  };
+
+  const handleEditClick = (service) => {
+    setEditingData(service);
+    setShowForm(true);
+  };
+
   return (
-    <div className="min-h-screen bg-blue-50 p-4 flex flex-col items-center py-10">
-      {/* Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-lg rounded-xl p-6 w-full max-w-2xl border border-blue-100 mb-10"
-      >
-        <h2 className="text-xl font-semibold text-blue-700 mb-6">
-          {isEditing ? "Edit Layanan" : "Tambah Layanan Baru"}
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-6 md:mb-8">
+        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+          Manajemen Layanan
         </h2>
+        <p className="text-sm md:text-base text-gray-600 mt-2">Kelola semua layanan klinik Anda</p>
+      </div>
 
-        <div className="grid grid-cols-1 gap-5">
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Nama Layanan"
-            className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500"
-            required
-          />
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            placeholder="Deskripsi Layanan"
-            className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="number"
-            name="duration_minutes"
-            value={form.duration_minutes}
-            onChange={handleChange}
-            placeholder="Durasi (menit)"
-            className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500"
-            required
-          />
-          <input
-            type="number"
-            name="price"
-            value={form.price}
-            onChange={handleChange}
-            placeholder="Harga"
-            className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500"
-            required
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="require_doctor"
-                checked={form.require_doctor}
-                onChange={handleChange}
-                className="h-5 w-5"
-              />
-              Butuh Dokter
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="allow_walkin"
-                checked={form.allow_walkin}
-                onChange={handleChange}
-                className="h-5 w-5"
-              />
-              Bisa Walk-in
-            </label>
-          </div>
-
-          {/* NEW FIELD */}
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="is_live"
-              checked={form.is_live}
-              onChange={handleChange}
-              className="h-5 w-5"
-            />
-            Layanan Video Call (Live Session)
-          </label>
-
-          {form.require_doctor && (
-            <button
-              type="button"
-              onClick={() => setShowDoctorModal(true)}
-              className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              Pilih Dokter
-            </button>
-          )}
-
-          {form.doctorIds.length > 0 && (
-            <p className="text-sm text-blue-700 mt-1">
-              Dokter dipilih: {form.doctorIds.join(", ")}
-            </p>
-          )}
+      {/* Desktop Table View */}
+      <div className="hidden lg:block max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl overflow-hidden border border-blue-100">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold">Nama Layanan</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold">Deskripsi</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold">Durasi</th>
+                <th className="px-6 py-4 text-right text-sm font-semibold">Harga</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold">Dokter</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold">Tipe</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-blue-50">
+              {services.map((s) => (
+                <tr key={s.id} className="hover:bg-blue-50 transition-colors duration-150">
+                  <td className="px-6 py-4 font-medium text-gray-900">{s.name}</td>
+                  <td className="px-6 py-4 text-gray-600 text-sm">{s.description}</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="inline-flex items-center px-3 py-1 rounded-xs text-xs font-medium bg-blue-100 text-blue-800">
+                      {s.duration_minutes} menit
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right font-semibold text-gray-900">
+                    Rp{s.price.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      s.require_doctor ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {s.require_doctor ? "Ya" : "Tidak"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-xs text-xs font-medium ${
+                      s.is_live ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {s.is_live ? "Video Call" : "Normal"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => handleEditClick(s)}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-150"
+                      >
+                        <FaEdit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-150"
+                      >
+                        <FaTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <button
-          type="submit"
-          className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-        >
-          {isEditing ? "Update Layanan" : "Simpan Layanan"}
-        </button>
-      </form>
-
-      {/* Services List */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-4xl">
+      {/* Mobile & Tablet Card View */}
+      <div className="lg:hidden max-w-4xl mx-auto space-y-4">
         {services.map((s) => (
-          <div
-            key={s.id}
-            className="bg-white p-4 rounded-xl shadow-md border border-blue-100 flex flex-col justify-between"
-          >
-            <h3 className="font-semibold text-blue-700">{s.name}</h3>
-            <p className="text-sm text-gray-600">{s.description}</p>
-            <p className="text-sm text-gray-500">
-              Durasi: {s.duration_minutes} menit
-            </p>
-            <p className="text-sm text-gray-500">Harga: Rp{s.price}</p>
-
-            <p className="text-sm text-green-600">
-              {s.require_doctor ? "Butuh Dokter" : "Tidak Butuh Dokter"}
-            </p>
-
-            <p className="text-sm text-purple-600">
-              {s.is_live ? "Video Call" : "Layanan Normal"}
-            </p>
-
-            <div className="flex justify-end gap-3 mt-3">
-              <button
-                onClick={() => handleEdit(s)}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                <FaEdit />
-              </button>
-              <button
-                onClick={() => handleDelete(s.id)}
-                className="text-red-600 hover:text-red-800"
-              >
-                <FaTrash />
-              </button>
+          <div key={s.id} className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3">
+              <h3 className="text-lg font-bold text-white">{s.name}</h3>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-600">{s.description}</p>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Durasi</p>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {s.duration_minutes} menit
+                  </span>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Harga</p>
+                  <p className="text-base font-bold text-gray-900">Rp{s.price.toLocaleString('id-ID')}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Memerlukan Dokter</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    s.require_doctor ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {s.require_doctor ? "Ya" : "Tidak"}
+                  </span>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Tipe Layanan</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    s.is_live ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {s.is_live ? "Video Call" : "Normal"}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => handleEditClick(s)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 font-medium text-sm"
+                >
+                  <FaEdit className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(s.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-150 font-medium text-sm"
+                >
+                  <FaTrash className="w-4 h-4" />
+                  Hapus
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Floating Add Button */}
-      {isEditing && (
-        <button
-          onClick={resetForm}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex justify-center items-center text-2xl hover:bg-blue-700 transition"
-        >
-          <FaPlus />
-        </button>
-      )}
+      <button
+        onClick={() => {
+          setEditingData(null);
+          setShowForm(true);
+        }}
+        className="fixed bottom-6 right-6 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full shadow-2xl flex justify-center items-center text-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 hover:scale-110 hover:shadow-blue-500/50 z-50"
+      >
+        <FaPlus />
+      </button>
 
-      {/* Doctor Modal */}
-      {showDoctorModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-transparent bg-opacity-40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-xl p-5 relative">
-            <h3 className="text-lg font-semibold text-blue-800 mb-4">
-              Pilih Dokter
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-80 overflow-y-auto pr-2">
-              {doctorsList.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="border border-blue-200 rounded-lg p-3 flex gap-3 items-center"
-                >
-                  <img
-                    src={doc.avatar}
-                    alt={doc.name}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900">{doc.name}</h4>
-                    <p className="text-sm text-blue-700">{doc.specialization}</p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        doc.isActive ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {doc.isActive ? "Aktif" : "Tidak Aktif"}
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={form.doctorIds.includes(doc.id)}
-                    onChange={() => toggleDoctor(doc.id)}
-                    className="h-5 w-5"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-3 mt-5">
-              <button
-                onClick={() => setShowDoctorModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-              >
-                Tutup
-              </button>
-              <button
-                onClick={() => setShowDoctorModal(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Selesai
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Floating Form */}
+      {showForm && (
+        <FloatingFormService
+          initialData={editingData}
+          onClose={() => setShowForm(false)}
+          onSubmit={handleFormSubmit}
+        />
       )}
     </div>
   );
