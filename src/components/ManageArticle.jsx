@@ -4,90 +4,19 @@ import EditorJS from "@editorjs/editorjs";
 import Header from "@editorjs/header";
 import List from "@editorjs/list";
 import Paragraph from "@editorjs/paragraph";
-import ImageTool from "@editorjs/image";
+import FloatingArticleForm from "./FloatingArticleForm";
+import { FaPlus, FaEdit, FaTrash, FaNewspaper, FaTag } from "react-icons/fa";
 
 const API = import.meta.env.VITE_API_URL || "";
 
 export default function ManageArticle() {
-  const editorRef = useRef(null);
-  const ejInstance = useRef(null);
-
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [thumbnailFile, setThumbnailFile] = useState(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [editData, setEditData] = useState(null);
 
-  /* ================= INIT EDITOR.JS ================= */
-  useEffect(() => {
-    if (!editorRef.current || ejInstance.current) return;
-
-    ejInstance.current = new EditorJS({
-      holder: editorRef.current,
-      autofocus: true,
-      placeholder: "Write your article here…",
-      tools: {
-        header: {
-          class: Header,
-          inlineToolbar: true,
-          config: {
-            levels: [2, 3, 4],
-            defaultLevel: 3,
-          },
-        },
-        paragraph: {
-          class: Paragraph,
-          inlineToolbar: true,
-        },
-        list: {
-          class: List,
-          inlineToolbar: true,
-        },
-        image: {
-          class: ImageTool,
-          config: {
-            uploader: {
-              async uploadByFile(file) {
-                const formData = new FormData();
-                formData.append("image", file);
-
-                const token = localStorage.getItem("token");
-                const res = await axios.post(
-                  `${API}/api/posts/upload`,
-                  formData,
-                  {
-                    headers: {
-                      Authorization: token ? `Bearer ${token}` : "",
-                      "Content-Type": "multipart/form-data",
-                    },
-                  }
-                );
-
-                const url = res?.data?.file?.url || res?.data?.url;
-                return {
-                  success: 1,
-                  file: { url },
-                };
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return () => {
-  if (typeof ejInstance.current?.destroy === "function") {
-    ejInstance.current.destroy();
-    ejInstance.current = null;
-  }
-};
-
-  }, []);
-
-  /* ================= LOAD DATA ================= */
   useEffect(() => {
     loadArticles();
     loadCategories();
@@ -103,123 +32,230 @@ export default function ManageArticle() {
     setCategories(res.data.data || []);
   };
 
-  /* ================= THUMBNAIL PREVIEW ================= */
-  useEffect(() => {
-    if (!thumbnailFile) return setThumbnailPreview(null);
-    const url = URL.createObjectURL(thumbnailFile);
-    setThumbnailPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [thumbnailFile]);
-
-  const uploadThumbnail = async () => {
-    if (!thumbnailFile) return null;
-
-    const formData = new FormData();
-    formData.append("image", thumbnailFile);
+  const handleDelete = async (id) => {
+    if (!confirm("Yakin hapus artikel ini?")) return;
     const token = localStorage.getItem("token");
-
-    const res = await axios.post(`${API}/api/posts/upload`, formData, {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-        "Content-Type": "multipart/form-data",
-      },
+    await axios.delete(`${API}/api/posts/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-
-    return res?.data?.file?.url || res?.data?.url || null;
+    loadArticles();
   };
 
-  /* ================= SUBMIT ================= */
-  const submitArticle = async () => {
-    if (!title.trim()) return alert("Title is required");
-
-    const content = await ejInstance.current.save();
-    if (!content.blocks.length) return alert("Content is empty");
-
-    const thumbnailUrl = await uploadThumbnail();
+  const handleSubmit = async (payload) => {
     const token = localStorage.getItem("token");
 
-    const payload = {
-      title,
-      excerpt,
-      category_id: categoryId || null,
-      thumbnail: thumbnailUrl,
-      content: content,
-      status: "published",
+    if (isEdit) {
+      await axios.put(`${API}/api/posts/${editData.id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } else {
+      await axios.post(`${API}/api/posts`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+
+    setShowForm(false);
+    setIsEdit(false);
+    setEditData(null);
+    loadArticles();
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      draft: "bg-gray-100 text-gray-800",
+      published: "bg-green-100 text-green-800",
+      archived: "bg-red-100 text-red-800",
     };
-
-    await axios.post(`${API}/api/posts`, payload, {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-    });
-
-    setTitle("");
-    setExcerpt("");
-    setCategoryId("");
-    setThumbnailFile(null);
-    setThumbnailPreview(null);
-    ejInstance.current.clear();
-
-    await loadArticles();
-    alert("Article published 🚀");
+    return styles[status] || "bg-blue-100 text-blue-800";
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Manage Articles</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-4 md:p-6 lg:p-8">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-6 md:mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg">
+            <FaNewspaper className="text-white text-2xl" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Manajemen Artikel
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1">Kelola artikel dan konten blog</p>
+          </div>
+        </div>
+      </div>
 
-      <section className="mb-10">
-        <div className="grid gap-4">
-          <input
-            className="border px-3 py-2 rounded"
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-
-          <textarea
-            rows={3}
-            className="border px-3 py-2 rounded"
-            placeholder="Excerpt"
-            value={excerpt}
-            onChange={(e) => setExcerpt(e.target.value)}
-          />
-
-          <select
-            className="border px-3 py-2 rounded"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-          >
-            <option value="">-- Select category --</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setThumbnailFile(e.target.files?.[0])}
-          />
-
-          {thumbnailPreview && (
-            <img src={thumbnailPreview} className="h-32 rounded" />
-          )}
-
-          <div className="border rounded p-4 bg-white">
-            <div ref={editorRef} />
+      {/* Desktop Table View */}
+      <div className="hidden lg:block max-w-7xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <th className="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Judul Artikel</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Kategori</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Status</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-blue-50">
+                {articles.map((a) => (
+                  <tr key={a.id} className="hover:bg-blue-50 transition-colors duration-150">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <FaNewspaper className="text-blue-600 text-lg flex-shrink-0" />
+                        <div>
+                          <p className="font-semibold text-gray-900 line-clamp-1">{a.title}</p>
+                          {a.slug && (
+                            <p className="text-xs text-gray-500 mt-1">/{a.slug}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {a.category?.name ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <FaTag className="text-xs" />
+                          {a.category.name}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(a.status)}`}>
+                        {a.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-center gap-3">
+                        <button
+                          onClick={() => {
+                            setIsEdit(true);
+                            setEditData(a);
+                            setShowForm(true);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-150"
+                        >
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(a.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-150"
+                        >
+                          <FaTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          <button
-            onClick={submitArticle}
-            className="bg-blue-600 text-white px-5 py-2 rounded"
-          >
-            Publish
-          </button>
+          {/* Empty State */}
+          {articles.length === 0 && (
+            <div className="text-center py-12">
+              <FaNewspaper className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-sm font-medium text-gray-900">Belum ada artikel</h3>
+              <p className="mt-1 text-sm text-gray-500">Klik tombol + untuk membuat artikel baru</p>
+            </div>
+          )}
         </div>
-      </section>
+      </div>
+
+      {/* Mobile & Tablet Card View */}
+      <div className="lg:hidden max-w-4xl mx-auto space-y-4">
+        {articles.map((a) => (
+          <div key={a.id} className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <FaNewspaper className="text-white text-lg" />
+                <h3 className="text-lg font-bold text-white line-clamp-1">{a.title}</h3>
+              </div>
+              {a.slug && (
+                <p className="text-xs text-blue-100">/{a.slug}</p>
+              )}
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Kategori</p>
+                  {a.category?.name ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <FaTag className="text-xs" />
+                      {a.category.name}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 text-sm">Tidak ada</span>
+                  )}
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Status</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(a.status)}`}>
+                    {a.status}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setIsEdit(true);
+                    setEditData(a);
+                    setShowForm(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 font-medium text-sm"
+                >
+                  <FaEdit className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(a.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-150 font-medium text-sm"
+                >
+                  <FaTrash className="w-4 h-4" />
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Empty State Mobile */}
+        {articles.length === 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-blue-100 p-12 text-center">
+            <FaNewspaper className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-base font-medium text-gray-900">Belum ada artikel</h3>
+            <p className="mt-2 text-sm text-gray-500">Klik tombol + untuk membuat artikel baru</p>
+          </div>
+        )}
+      </div>
+
+      {/* FLOATING PLUS */}
+      <button
+        onClick={() => {
+          setIsEdit(false);
+          setEditData(null);
+          setShowForm(true);
+        }}
+        className="fixed bottom-6 right-6 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full shadow-2xl flex justify-center items-center text-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 hover:scale-110 hover:shadow-blue-500/50 z-50"
+      >
+        <FaPlus />
+      </button>
+
+      {/* FLOATING FORM */}
+      {showForm && (
+        <FloatingArticleForm
+          onClose={() => setShowForm(false)}
+          onSubmit={handleSubmit}
+          initialData={editData}
+          categories={categories}
+        />
+      )}
     </div>
   );
 }

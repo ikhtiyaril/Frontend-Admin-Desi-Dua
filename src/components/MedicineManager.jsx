@@ -1,29 +1,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { FaPlus, FaEdit, FaTrash, FaPills, FaImage } from "react-icons/fa";
+import FloatingFormProduct from "./FloatingFormProduct";
 
-const API = `${import.meta.env.VITE_API_URL}`;
+const API = import.meta.env.VITE_API_URL;
 
 export default function MedicineManager() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-
-  const [form, setForm] = useState({
-    name: "",
-    slug: "",
-    description: "",
-    category_id: "",
-    price: "",
-    stock: 0,
-    is_prescription_required: false,
-  });
-
-  const [file, setFile] = useState(null);
-  const [isEdit, setIsEdit] = useState(false);
-  const [editId, setEditId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editProduct, setEditProduct] = useState(null);
 
   const fetchProducts = async () => {
     const res = await axios.get(`${API}/api/medicine/products`);
-    console.log(res.data)
     setProducts(res.data.data);
   };
 
@@ -37,328 +26,283 @@ export default function MedicineManager() {
     fetchCategories();
   }, []);
 
-  const generateSlug = (text) =>
-    text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "checkbox" ? checked : value,
-      ...(name === "name" ? { slug: generateSlug(value) } : {}),
-    });
-  };
-
-  const handleFileChange = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-
-    if (f.size > 3 * 1024 * 1024) {
-      alert("File too large. Max 3MB allowed.");
-      e.target.value = "";
-      return;
-    }
-
-    setFile(f);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async (data, file, id) => {
     const formData = new FormData();
-    formData.append("name", form.name);
-    formData.append("slug", form.slug);
-    formData.append("description", form.description);
-    formData.append("category_id", form.category_id);
-    formData.append("price", form.price);
-    formData.append("stock", form.stock);
-    formData.append("is_prescription_required", form.is_prescription_required);
-
+    formData.append("name", data.name);
+    formData.append("slug", data.slug);
+    formData.append("description", data.description);
+    formData.append("category_id", data.category_id);
+    formData.append("price", data.price);
+    formData.append("stock", data.stock);
+    formData.append("is_prescription_required", data.is_prescription_required);
     if (file) formData.append("image", file);
-   console.log("File yang dikirim:", file);
 
     try {
-      if (isEdit) {
-        await axios.put(`${API}/api/medicine/admin/products/${editId}`, formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.token}`,
-            "Content-Type": "multipart/form-data",
-          },
+      if (id) {
+        await axios.put(`${API}/api/medicine/admin/products/${id}`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.token}`, "Content-Type": "multipart/form-data" }
         });
       } else {
         await axios.post(`${API}/api/medicine/admin/products`, formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.token}`,
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { Authorization: `Bearer ${localStorage.token}`, "Content-Type": "multipart/form-data" }
         });
       }
-
-      setForm({
-        name: "",
-        slug: "",
-        description: "",
-        category_id: "",
-        price: "",
-        stock: 0,
-        is_prescription_required: false,
-      });
-      setFile(null);
-      setIsEdit(false);
-      setEditId(null);
       fetchProducts();
-    } catch (error) {
-      console.error(error);
+      setEditProduct(null);
+    } catch (err) {
+      console.error(err);
       alert("Error submitting data");
     }
   };
 
-  const handleEdit = (p) => {
-    setIsEdit(true);
-    setEditId(p.id);
-    setForm({
-      name: p.name,
-      slug: p.slug,
-      description: p.description,
-      category_id: p.category_id,
-      price: p.price,
-      stock: p.stock,
-      is_prescription_required: p.is_prescription_required,
-    });
-    setFile(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleEdit = (product) => {
+    setEditProduct(product);
+    setShowForm(true);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Yakin mau hapus produk ini?")) return;
-
     try {
       await axios.delete(`${API}/api/medicine/admin/products/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.token}` },
+        headers: { Authorization: `Bearer ${localStorage.token}` }
       });
       fetchProducts();
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       alert("Error deleting");
     }
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-semibold text-blue-700 mb-6">
-        Product Management (Medicines)
-      </h1>
-
-      <div className="bg-white shadow-md p-6 rounded-lg border border-blue-100 mb-10">
-        <h2 className="text-xl font-semibold text-blue-600 mb-4">
-          {isEdit ? "Edit Product" : "Add New Product"}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-4 md:p-6 lg:p-8">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-6 md:mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg">
+            <FaPills className="text-white text-2xl" />
+          </div>
           <div>
-            <label className="font-medium">Name</label>
-            <input
-              type="text"
-              name="name"
-              className="w-full p-2 border rounded mt-1"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Manajemen Produk Obat
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1">Kelola stok dan informasi produk obat</p>
           </div>
-
-          <div>
-            <label className="font-medium">Slug (auto)</label>
-            <input
-              type="text"
-              name="slug"
-              className="w-full p-2 border rounded mt-1 bg-gray-100"
-              value={form.slug}
-              readOnly
-            />
-          </div>
-
-          <div>
-            <label className="font-medium">Category</label>
-            <select
-              name="category_id"
-              className="w-full p-2 border rounded mt-1"
-              value={form.category_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">-- Select Category --</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="font-medium">Price</label>
-            <input
-              type="number"
-              name="price"
-              className="w-full p-2 border rounded mt-1"
-              value={form.price}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="font-medium">Stock</label>
-            <input
-              type="number"
-              name="stock"
-              className="w-full p-2 border rounded mt-1"
-              value={form.stock}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div>
-            <label className="font-medium">Image</label>
-            <input
-              type="file"
-              name="image"
-              className="w-full p-2 border rounded mt-1"
-              accept="image/*"
-              onChange={handleFileChange}
-            />
-          </div>
-
-          <div className="col-span-2">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="is_prescription_required"
-                checked={form.is_prescription_required}
-                onChange={handleChange}
-              />
-              <span className="font-medium">Requires Prescription</span>
-            </label>
-          </div>
-
-          <div className="col-span-2">
-            <label className="font-medium">Description</label>
-            <textarea
-              name="description"
-              rows="4"
-              className="w-full p-2 border rounded mt-1"
-              value={form.description}
-              onChange={handleChange}
-            ></textarea>
-          </div>
-
-          <div className="col-span-2 flex gap-4">
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-            >
-              {isEdit ? "Save Changes" : "Add Product"}
-            </button>
-
-            {isEdit && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEdit(false);
-                  setEditId(null);
-                  setForm({
-                    name: "",
-                    slug: "",
-                    description: "",
-                    category_id: "",
-                    price: "",
-                    stock: 0,
-                    is_prescription_required: false,
-                  });
-                  setFile(null);
-                }}
-                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-              >
-                Cancel Edit
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="bg-white shadow-md p-6 rounded-lg border border-blue-100">
-        <h2 className="text-xl font-semibold text-blue-600 mb-4">All Products</h2>
-
-        <div className="overflow-x-auto">
-          <table className="w-full border">
-            <thead className="bg-blue-50 border-b">
-              <tr>
-                <th className="p-3 text-left">Image</th>
-                <th className="p-3 text-left">Name</th>
-                <th className="p-3">Price</th>
-                <th className="p-3">Stock</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Prescription?</th>
-                <th className="p-3 text-center">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id} className="border-b hover:bg-blue-50">
-                  <td className="p-3">
-                    {p.image_url ? (
-                      <img
-                        src={p.image_url}
-                        alt=""
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-200 rounded"></div>
-                    )}
-                  </td>
-                  <td className="p-3">{p.name}</td>
-                  <td className="p-3">Rp {Number(p.price).toLocaleString()}</td>
-                  <td className="p-3">{p.stock}</td>
-                  <td className="p-3">{p.category?.name}</td>
-                  <td className="p-3 text-center">
-                    {p.is_prescription_required ? (
-                      <span className="text-red-600 font-semibold">Yes</span>
-                    ) : (
-                      <span className="text-green-600 font-semibold">No</span>
-                    )}
-                  </td>
-
-                  <td className="p-3 flex gap-2 justify-center">
-                    <button
-                      onClick={() => handleEdit(p)}
-                      className="px-3 py-1 bg-yellow-400 rounded hover:bg-yellow-500"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {products.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center p-4 text-gray-500">
-                    No products available.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block max-w-7xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1000px]">
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <th className="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Gambar</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold whitespace-nowrap">Nama Produk</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap">Harga</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Stok</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Kategori</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Resep Dokter</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold whitespace-nowrap">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-blue-50">
+                {products.map((p) => (
+                  <tr key={p.id} className="hover:bg-blue-50 transition-colors duration-150">
+                    <td className="px-6 py-4">
+                      {p.image_url ? (
+                        <img 
+                          src={p.image_url} 
+                          alt={p.name}
+                          className="w-16 h-16 object-cover rounded-lg ring-2 ring-blue-100 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
+                          <FaImage className="text-gray-400 text-xl" />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-semibold text-gray-900">{p.name}</p>
+                        {p.description && (
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">{p.description}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-bold text-gray-900">
+                        Rp {Number(p.price).toLocaleString('id-ID')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        p.stock > 10 ? 'bg-green-100 text-green-800' :
+                        p.stock > 0 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {p.stock} unit
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {p.category?.name || "-"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        p.is_prescription_required ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {p.is_prescription_required ? 'Ya' : 'Tidak'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => handleEdit(p)}
+                          className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-150"
+                        >
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-150"
+                        >
+                          <FaTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Empty State */}
+          {products.length === 0 && (
+            <div className="text-center py-12">
+              <FaPills className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-sm font-medium text-gray-900">Belum ada produk</h3>
+              <p className="mt-1 text-sm text-gray-500">Klik tombol + untuk menambah produk baru</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile & Tablet Card View */}
+      <div className="lg:hidden max-w-4xl mx-auto space-y-4">
+        {products.map((p) => (
+          <div key={p.id} className="bg-white rounded-xl shadow-lg border border-blue-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3">
+              <h3 className="text-lg font-bold text-white">{p.name}</h3>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <div className="flex gap-4">
+                {p.image_url ? (
+                  <img 
+                    src={p.image_url} 
+                    alt={p.name}
+                    className="w-20 h-20 object-cover rounded-lg ring-2 ring-blue-100 shadow-sm flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FaImage className="text-gray-400 text-2xl" />
+                  </div>
+                )}
+                
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Harga</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      Rp {Number(p.price).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Stok</p>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      p.stock > 10 ? 'bg-green-100 text-green-800' :
+                      p.stock > 0 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {p.stock} unit
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {p.description && (
+                <div>
+                  <p className="text-xs text-gray-500 font-medium mb-1">Deskripsi</p>
+                  <p className="text-sm text-gray-700">{p.description}</p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Kategori</p>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    {p.category?.name || "-"}
+                  </span>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500 font-medium">Resep Dokter</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    p.is_prescription_required ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  }`}>
+                    {p.is_prescription_required ? 'Ya' : 'Tidak'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => handleEdit(p)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 font-medium text-sm"
+                >
+                  <FaEdit className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-150 font-medium text-sm"
+                >
+                  <FaTrash className="w-4 h-4" />
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Empty State Mobile */}
+        {products.length === 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-blue-100 p-12 text-center">
+            <FaPills className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-base font-medium text-gray-900">Belum ada produk</h3>
+            <p className="mt-2 text-sm text-gray-500">Klik tombol + untuk menambah produk baru</p>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Add Button */}
+      <button
+        onClick={() => { setShowForm(true); setEditProduct(null); }}
+        className="fixed bottom-6 right-6 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full shadow-2xl flex justify-center items-center text-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 hover:scale-110 hover:shadow-blue-500/50 z-50"
+      >
+        <FaPlus />
+      </button>
+
+      {/* Floating Form */}
+      {showForm && (
+        <FloatingFormProduct
+          initialData={editProduct}
+          categories={categories}
+          onClose={() => setShowForm(false)}
+          onSubmit={handleSubmit}
+        />
+      )}
     </div>
   );
 }
