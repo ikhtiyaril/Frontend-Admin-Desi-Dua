@@ -9,10 +9,15 @@ import ManageCategory from '../components/ManageCategory';
 import ManageOrder from '../components/ManageOrder';
 import ManageArticle from '../components/ManageArticle';
 import { useNavigate } from 'react-router-dom';
+import ManagePrescription from '../components/ManagePrescription';
+import ManageGeneral from '../components/ManageGeneral';
+import { Menu, X, ChevronDown, ChevronRight, LogOut, Package, FileText, Pill, ClipboardList, Calendar, Settings, Folder, ShoppingCart, FileEdit } from 'lucide-react';
 
 export default function DashboardAdminPages() {
   const [activePage, setActivePage] = useState('ManageService');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
   const navigation = useNavigate();
 
   const token = localStorage.getItem('token');
@@ -28,14 +33,64 @@ export default function DashboardAdminPages() {
     navigation('/');
   };
 
+  const toggleSubmenu = (key) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+ 
+
   const menu = [
-    { key: 'ManageService', label: 'Manage Service', icon: '🏥' },
-    { key: 'BookingMonitoring', label: 'Booking Monitoring', icon: '📊' },
-    { key: 'ManageDoctorForm', label: 'Manage Doctor', icon: '👨‍⚕️' },
-    { key: 'ManageMedicine', label: 'Manage Medicine', icon: '💊' },
-    { key: 'ManageCategory', label: 'Manage Category', icon: '📂' },
-    { key: 'ManageOrder', label: 'Manage Order', icon: '🛒' },
-    { key: 'ManageArticle', label: 'Manage Article', icon: '📝' },
+    { 
+      key: 'ManageService', 
+      label: 'Layanan', 
+      icon: Package,
+      single: true
+    },
+    { 
+      key: 'Pesanan',
+      label: 'Pesanan',
+      icon: ShoppingCart,
+      submenu: [
+        { key: 'BookingMonitoring', label: 'Booking', icon: Calendar },
+        { key: 'ManageOrder', label: 'Order', icon: ClipboardList }
+      ]
+    },
+    { 
+      key: 'ManageDoctorForm', 
+      label: 'Dokter', 
+      icon: FileText,
+      single: true
+    },
+    { 
+      key: 'Obat',
+      label: 'Obat',
+      icon: Pill,
+      submenu: [
+        { key: 'ManageMedicine', label: 'Medicine', icon: Pill },
+        { key: 'ManagePrescription', label: 'Resep', icon: ClipboardList }
+      ]
+    },
+    { 
+      key: 'ManageCategory', 
+      label: 'Kategori', 
+      icon: Folder,
+      single: true
+    },
+    { 
+      key: 'ManageArticle', 
+      label: 'Artikel', 
+      icon: FileEdit,
+      single: true
+    },
+    { 
+      key: 'ManageGeneral', 
+      label: 'Umum', 
+      icon: Settings,
+      single: true
+    }
   ];
 
   const renderContent = () => {
@@ -58,196 +113,197 @@ export default function DashboardAdminPages() {
         return <ManageOrder/>;
       case 'ManageArticle':
         return <ManageArticle/>;
+      case 'ManagePrescription':
+        return <ManagePrescription/>;
+      case 'ManageGeneral':
+        return <ManageGeneral/>;
       default:
         return <ManageService />;
     }
   };
 
+  const handleMenuClick = (item) => {
+    if (item.single) {
+      setActivePage(item.key);
+      setIsMobileSidebarOpen(false);
+    } else {
+      toggleSubmenu(item.key);
+    }
+  };
+
+  const handleSubmenuClick = (key) => {
+    setActivePage(key);
+    setIsMobileSidebarOpen(false);
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Add custom CSS for scrollbar */}
-      <style>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-custom::-webkit-scrollbar {
-          width: 6px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .scrollbar-custom::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 3px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
-        }
-      `}</style>
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-50 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center mr-3">
-            <span className="text-2xl">🏥</span>
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Package className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">KlinikCare Admin</h1>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">KlinikCare</h1>
+            <p className="text-xs text-gray-500">Admin Dashboard</p>
+          </div>
         </div>
         <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center"
+          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors"
         >
-          <span className="text-2xl">{isSidebarOpen ? '✕' : '☰'}</span>
+          {isMobileSidebarOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
         </button>
       </div>
 
-      {/* Overlay for mobile */}
-      {isSidebarOpen && (
+      {/* Mobile Overlay */}
+      {isMobileSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsSidebarOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
+          onClick={() => setIsMobileSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar - Desktop: Icon Only (80px), Mobile: Full Slide */}
-      <div className={`
-        fixed lg:sticky top-0 h-screen bg-white shadow-lg z-50
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:sticky top-0 h-screen bg-white border-r border-gray-200 z-50
         transition-all duration-300 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-        w-72 lg:w-20
-        ${isSidebarOpen ? 'left-0' : ''}
+        ${isSidebarOpen ? 'lg:w-64' : 'lg:w-20'}
+        w-64
       `}>
-        <div className="h-full flex flex-col p-4">
-          {/* Logo - Desktop (Icon Only) */}
-          <div className="hidden lg:flex items-center justify-center mb-8 mt-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-              <span className="text-3xl">🏥</span>
-            </div>
-          </div>
-
-          {/* Logo - Mobile (Full) */}
-          <div className="lg:hidden flex items-center mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mr-3">
-              <span className="text-3xl">🏥</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">KlinikCare</h2>
-              <p className="text-sm text-gray-500">Admin Dashboard</p>
+        <div className="h-full flex flex-col">
+          {/* Logo */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              {(isSidebarOpen || isMobileSidebarOpen) && (
+                <div className="lg:block hidden">
+                  <h2 className="text-lg font-bold text-gray-900">KlinikCare</h2>
+                  <p className="text-xs text-gray-500">Admin Dashboard</p>
+                </div>
+              )}
+              {/* Desktop Toggle */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="ml-auto hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <Menu className="w-5 h-5 text-gray-600" />
+              </button>
             </div>
           </div>
 
           {/* Menu */}
-          <nav className="flex-1 overflow-y-auto scrollbar-custom">
-            <ul className="flex flex-col gap-2">
-              {menu.map(item => (
-                <li key={item.key}>
-                  <button
-                    onClick={() => {
-                      setActivePage(item.key);
-                      setIsSidebarOpen(false);
-                    }}
-                    className={`
-                      group relative w-full flex items-center justify-center lg:justify-center px-4 py-3 rounded-xl
-                      font-medium transition-all duration-200
-                      ${activePage === item.key 
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                        : 'text-gray-700 hover:bg-blue-50'
-                      }
-                    `}
-                  >
-                    {/* Icon - Always visible */}
-                    <span className="text-2xl flex-shrink-0">{item.icon}</span>
-                    
-                    {/* Text - Mobile only */}
-                    <span className="lg:hidden ml-3 whitespace-nowrap">
-                      {item.label}
-                    </span>
+          <nav className="flex-1 overflow-y-auto p-3">
+            <ul className="space-y-1">
+              {menu.map(item => {
+                const Icon = item.icon;
+                const isExpanded = expandedMenus[item.key];
+                const isActive = item.single ? activePage === item.key : item.submenu?.some(sub => sub.key === activePage);
 
-                    {/* Tooltip - Desktop on hover (Floating Card Style) */}
-                    <div className="
-                      hidden lg:flex
-                      absolute left-full ml-3 px-4 py-2.5 
-                      bg-white text-gray-900 text-sm font-semibold rounded-xl shadow-xl border border-gray-200
-                      opacity-0 invisible group-hover:opacity-100 group-hover:visible 
-                      pointer-events-none
-                      transition-all duration-200 whitespace-nowrap z-[60]
-                      items-center gap-2
-                    ">
-                      <span>{item.icon}</span>
-                      <span>{item.label}</span>
-                      {/* Arrow */}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 -mr-2 border-8 border-transparent border-r-white" />
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 -mr-2.5 border-8 border-transparent border-r-gray-200" />
-                    </div>
-                  </button>
-                </li>
-              ))}
+                return (
+                  <li key={item.key}>
+                    <button
+                      onClick={() => handleMenuClick(item)}
+                      className={`
+                        w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                        font-medium transition-all duration-200
+                        ${isActive
+                          ? 'bg-blue-600 text-white shadow-sm' 
+                          : 'text-gray-700 hover:bg-gray-100'
+                        }
+                        ${!isSidebarOpen && !isMobileSidebarOpen ? 'justify-center' : ''}
+                      `}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      {(isSidebarOpen || isMobileSidebarOpen) && (
+                        <>
+                          <span className="flex-1 text-left text-sm">{item.label}</span>
+                          {!item.single && (
+                            isExpanded ? 
+                            <ChevronDown className="w-4 h-4 flex-shrink-0" /> : 
+                            <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                          )}
+                        </>
+                      )}
+                    </button>
+
+                    {/* Submenu */}
+                    {!item.single && isExpanded && (isSidebarOpen || isMobileSidebarOpen) && (
+                      <ul className="mt-1 ml-4 space-y-1">
+                        {item.submenu.map(subItem => {
+                          const SubIcon = subItem.icon;
+                          return (
+                            <li key={subItem.key}>
+                              <button
+                                onClick={() => handleSubmenuClick(subItem.key)}
+                                className={`
+                                  w-full flex items-center gap-3 px-3 py-2 rounded-lg
+                                  text-sm transition-all duration-200
+                                  ${activePage === subItem.key
+                                    ? 'bg-blue-50 text-blue-600 font-medium'
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                  }
+                                `}
+                              >
+                                <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                <span>{subItem.label}</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 
-          {/* Footer - Desktop: Icon Only, Mobile: Full Info */}
-          <div className="mt-auto pt-4 border-t border-gray-200">
-            <div className="flex items-center justify-center lg:justify-center px-4 py-3">
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">👤</span>
+                <span className="text-sm font-semibold text-blue-600">AD</span>
               </div>
-              
-              {/* User Info - Mobile Only */}
-              <div className="lg:hidden ml-3">
-                <p className="font-semibold text-gray-900 text-sm">Admin User</p>
-                <p className="text-xs text-gray-500">admin@klinik.com</p>
-                <button 
-                  className="text-xs text-red-500 hover:text-red-700 font-medium mt-1" 
-                  onClick={handleLogout}
-                >
-                  Keluar
-                </button>
-              </div>
+              {(isSidebarOpen || isMobileSidebarOpen) && (
+                <div className="lg:block hidden">
+                  <p className="text-sm font-semibold text-gray-900">Admin User</p>
+                  <p className="text-xs text-gray-500">admin@klinik.com</p>
+                </div>
+              )}
             </div>
-
-            {/* Logout Button - Desktop (Icon Only with Tooltip) */}
-            <button 
+            <button
               onClick={handleLogout}
-              className="hidden lg:flex w-full items-center justify-center p-3 rounded-xl text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all group relative mt-2"
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                text-gray-700 hover:bg-red-50 hover:text-red-600
+                font-medium transition-all duration-200
+                ${!isSidebarOpen && !isMobileSidebarOpen ? 'justify-center' : ''}
+              `}
             >
-              <span className="text-2xl">🚪</span>
-              
-              {/* Tooltip for Logout (Floating Card Style) */}
-              <div className="
-                absolute left-full ml-3 px-4 py-2.5 
-                bg-white text-gray-900 text-sm font-semibold rounded-xl shadow-xl border border-gray-200
-                opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                pointer-events-none
-                transition-all duration-200 whitespace-nowrap z-[60]
-                flex items-center gap-2
-              ">
-                <span>🚪</span>
-                <span>Keluar</span>
-                {/* Arrow */}
-                <div className="absolute right-full top-1/2 -translate-y-1/2 -mr-2 border-8 border-transparent border-r-white" />
-                <div className="absolute right-full top-1/2 -translate-y-1/2 -mr-2.5 border-8 border-transparent border-r-gray-200" />
-              </div>
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              {(isSidebarOpen || isMobileSidebarOpen) && (
+                <span className="text-sm">Keluar</span>
+              )}
             </button>
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Spacer for mobile header */}
-        <div className="lg:hidden h-20" />
-        
-        {/* Content Area - Now has MORE space! */}
+      <main className="flex-1 flex flex-col min-h-screen">
+        <div className="lg:hidden h-16" />
         <div className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          <div className="max-w-full mx-auto">
+          <div className="max-w-7xl mx-auto">
             {renderContent()}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
