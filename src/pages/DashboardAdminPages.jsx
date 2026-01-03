@@ -65,6 +65,12 @@ export default function DashboardAdminPages() {
       single: true
     },
     { 
+      key: 'ManageDoctorSchedule', 
+      label: 'Dokter Schedule', 
+      icon: FileText,
+      single: true
+    },
+    { 
       key: 'Obat',
       label: 'Obat',
       icon: Pill,
