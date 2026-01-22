@@ -32,26 +32,33 @@ export default function ManageService() {
     }
   };
 
-  const handleFormSubmit = async (formData) => {
+ const handleFormSubmit = async (formData) => {
+  try {
     if (editingData) {
-      // EDIT
-      try {
-        const { data } = await axios.put(`${API_URL}/${editingData.id}`, formData);
-        setServices((prev) => prev.map((s) => (s.id === data.id ? data : s)));
-      } catch (err) {
-        console.error(err);
-      }
+      const { data } = await axios.put(
+        `${API_URL}/${editingData.id}`,
+        formData // ✅ PAKAI DATA FORM
+      );
+
+      setServices(prev =>
+        prev.map(s => (s.id === data.id ? data : s))
+      );
     } else {
-      // ADD
-      try {
-        const { data } = await axios.post(API_URL, formData);
-        setServices((prev) => [...prev, data]);
-      } catch (err) {
-        console.error(err);
-      }
+      const { data } = await axios.post(
+        `${API_URL}`,
+        formData // ✅ BUKAN editingData
+      );
+
+      setServices(prev => [...prev, data]);
     }
+  } catch (err) {
+    console.error("SUBMIT ERROR:", err);
+  } finally {
     setEditingData(null);
-  };
+    setShowForm(false); // 🔥 penting biar form nutup
+  }
+};
+
 
   const handleEditClick = (service) => {
     setEditingData(service);

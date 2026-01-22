@@ -11,7 +11,9 @@ import ManageArticle from '../components/ManageArticle';
 import { useNavigate } from 'react-router-dom';
 import ManagePrescription from '../components/ManagePrescription';
 import ManageGeneral from '../components/ManageGeneral';
-import { Menu, X, ChevronDown, ChevronRight, LogOut, Package, FileText, Pill, ClipboardList, Calendar, Settings, Folder, ShoppingCart, FileEdit } from 'lucide-react';
+import ManageWithdraw from '../components/ManageWithdraw';
+
+import {ClockPlus, HandCoins,Menu, X, ChevronDown, ChevronRight, LogOut, Package, FileText, Pill, ClipboardList, Calendar, Settings, Folder, ShoppingCart, FileEdit } from 'lucide-react';
 
 export default function DashboardAdminPages() {
   const [activePage, setActivePage] = useState('ManageService');
@@ -67,7 +69,7 @@ export default function DashboardAdminPages() {
     { 
       key: 'ManageDoctorSchedule', 
       label: 'Dokter Schedule', 
-      icon: FileText,
+      icon: ClockPlus,
       single: true
     },
     { 
@@ -89,6 +91,12 @@ export default function DashboardAdminPages() {
       key: 'ManageArticle', 
       label: 'Artikel', 
       icon: FileEdit,
+      single: true
+    },
+    { 
+      key: 'ManageWithdraw', 
+      label: 'Withdraw', 
+      icon: HandCoins,
       single: true
     },
     { 
@@ -121,6 +129,8 @@ export default function DashboardAdminPages() {
         return <ManageArticle/>;
       case 'ManagePrescription':
         return <ManagePrescription/>;
+         case 'ManageWithdraw':
+        return <ManageWithdraw/>;
       case 'ManageGeneral':
         return <ManageGeneral/>;
       default:
@@ -151,7 +161,7 @@ export default function DashboardAdminPages() {
             <Package className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">KlinikCare</h1>
+            <h1 className="text-lg font-bold text-gray-900">Desidua</h1>
             <p className="text-xs text-gray-500">Admin Dashboard</p>
           </div>
         </div>
@@ -189,7 +199,7 @@ export default function DashboardAdminPages() {
               </div>
               {(isSidebarOpen || isMobileSidebarOpen) && (
                 <div className="lg:block hidden">
-                  <h2 className="text-lg font-bold text-gray-900">KlinikCare</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Desidua</h2>
                   <p className="text-xs text-gray-500">Admin Dashboard</p>
                 </div>
               )}
