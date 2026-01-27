@@ -104,15 +104,20 @@ export default function BookingMonitoring() {
     }
 
     if (st === "confirmed") {
-      return (
-        <button
-          onClick={() => updateStatus(item.id, "completed")}
-          className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-        >
-          ✔ Selesaikan
-        </button>
-      );
-    }
+  return (
+    <div className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+      <div className="flex items-center gap-2 text-blue-700 font-semibold text-sm">
+        <span className="text-base">ℹ️</span>
+        <span>Status: Dikonfirmasi</span>
+      </div>
+
+      <p className="mt-1 text-xs text-blue-600">
+        Menunggu konfirmasi lanjutan dari pasien atau dokter
+      </p>
+    </div>
+  );
+}
+
 
     if (st === "cancelled") {
       return (

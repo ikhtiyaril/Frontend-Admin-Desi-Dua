@@ -2,24 +2,6 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FaEdit, FaTrash, FaPlus, FaTimes } from "react-icons/fa";
 
-// Dummy data, nanti bisa diganti fetch dari API
-const dummyPatients = [
-  { id: 1, name: "Budi Santoso" },
-  { id: 2, name: "Melati Putri" },
-  { id: 3, name: "Hendra Wijaya" },
-];
-
-const dummyServices = [
-  { id: 1, name: "General Checkup" },
-  { id: 2, name: "Dental Cleaning" },
-  { id: 3, name: "Fisioterapi" },
-];
-
-const dummyDoctors = [
-  { id: 1, name: "dr. Budi Santoso" },
-  { id: 2, name: "drg. Melati Putri" },
-  { id: 3, name: "dr. Hendra Wijaya" },
-];
 
 export default function ManageBooking() {
   const API_URL = `${import.meta.env.VITE_API_URL}/api/booking`;
@@ -45,6 +27,8 @@ export default function ManageBooking() {
   const fetchBookings = async () => {
     try {
       const { data } = await axios.get(API_URL);
+      Console.log("INI DATA BOOKINGS")
+      console.log(data)
       setBookings(data);
     } catch (err) {
       console.error("Gagal fetch booking:", err);
@@ -52,6 +36,7 @@ export default function ManageBooking() {
   };
 
   useEffect(() => {
+    console.log(bookings)
     fetchBookings();
   }, []);
 

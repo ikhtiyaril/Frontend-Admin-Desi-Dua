@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { X } from "lucide-react"; // Opsional: jika Anda punya lucide-react, jika tidak bisa pakai teks "✕"
 
 export default function FloatingFormProduct({ onClose, onSubmit, categories, initialData }) {
   const [form, setForm] = useState({
@@ -15,13 +16,13 @@ export default function FloatingFormProduct({ onClose, onSubmit, categories, ini
   useEffect(() => {
     if (initialData) {
       setForm({
-        name: initialData.name,
-        slug: initialData.slug,
-        description: initialData.description,
-        category_id: initialData.category_id,
-        price: initialData.price,
-        stock: initialData.stock,
-        is_prescription_required: initialData.is_prescription_required,
+        name: initialData.name || "",
+        slug: initialData.slug || "",
+        description: initialData.description || "",
+        category_id: initialData.category_id || "",
+        price: initialData.price || "",
+        stock: initialData.stock || 0,
+        is_prescription_required: initialData.is_prescription_required || false,
       });
       setFile(null);
     }
@@ -52,123 +53,174 @@ export default function FloatingFormProduct({ onClose, onSubmit, categories, ini
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.name || !form.category_id || !form.price) return alert("Name, Category & Price required!");
+    if (!form.name || !form.category_id || !form.price) return alert("Nama, Kategori & Harga wajib diisi!");
     onSubmit(form, file, initialData?.id);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex justify-center items-center pt-20 z-50 p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xl border border-blue-200"
-      >
-        <h3 className="text-2xl font-semibold text-blue-700 mb-5">
-          {initialData ? "Edit Product" : "Tambah Product"}
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[95vh] animate-in fade-in zoom-in duration-200">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <label className="font-medium">Name</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full p-2 border rounded mt-1"
-              required
-            />
+            <h3 className="text-xl font-bold text-slate-800">
+              {initialData ? "Edit Produk" : "Tambah Produk Baru"}
+            </h3>
+            <p className="text-sm text-slate-500">Lengkapi informasi detail produk di bawah ini.</p>
           </div>
-
-          <div>
-            <label className="font-medium">Slug (auto)</label>
-            <input
-              type="text"
-              name="slug"
-              value={form.slug}
-              readOnly
-              className="w-full p-2 border rounded mt-1 bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="font-medium">Category</label>
-            <select
-              name="category_id"
-              value={form.category_id}
-              onChange={handleChange}
-              className="w-full p-2 border rounded mt-1"
-              required
-            >
-              <option value="">-- Select Category --</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="font-medium">Price</label>
-            <input
-              type="number"
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              className="w-full p-2 border rounded mt-1"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="font-medium">Stock</label>
-            <input
-              type="number"
-              name="stock"
-              value={form.stock}
-              onChange={handleChange}
-              className="w-full p-2 border rounded mt-1"
-            />
-          </div>
-
-          <div>
-            <label className="font-medium">Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="w-full p-2 border rounded mt-1"
-            />
-          </div>
-
-          <div className="col-span-2 flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="is_prescription_required"
-              checked={form.is_prescription_required}
-              onChange={handleChange}
-            />
-            <span className="font-medium">Requires Prescription</span>
-          </div>
-
-          <div className="col-span-2">
-            <label className="font-medium">Description</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows="4"
-              className="w-full p-2 border rounded mt-1"
-            ></textarea>
-          </div>
-
-          <div className="col-span-2 flex justify-end gap-3 mt-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Tutup</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              {initialData ? "Update" : "Simpan"}
-            </button>
-          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+          >
+            <X size={20} />
+          </button>
         </div>
-      </form>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            
+            {/* Name */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nama Produk</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Contoh: Paracetamol 500mg"
+                value={form.name}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                required
+              />
+            </div>
+
+            {/* Slug - ReadOnly */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Slug URL</label>
+              <input
+                type="text"
+                name="slug"
+                value={form.slug}
+                readOnly
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 text-sm italic"
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Kategori</label>
+              <select
+                name="category_id"
+                value={form.category_id}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
+                required
+              >
+                <option value="">Pilih Kategori</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Price */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Harga (Rp)</label>
+              <input
+                type="number"
+                name="price"
+                placeholder="0"
+                value={form.price}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              />
+            </div>
+
+            {/* Stock */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Stok</label>
+              <input
+                type="number"
+                name="stock"
+                placeholder="0"
+                value={form.stock}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+
+            {/* Image */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Foto Produk</label>
+              <div className="mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-lg hover:border-blue-400 transition-colors">
+                <div className="space-y-1 text-center">
+                  <svg className="mx-auto h-10 w-10 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <div className="flex text-sm text-slate-600">
+                    <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                      <span>Upload file</span>
+                      <input type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
+                    </label>
+                    <p className="pl-1">atau drag and drop</p>
+                  </div>
+                  <p className="text-xs text-slate-500">PNG, JPG up to 3MB</p>
+                  {file && <p className="text-xs text-green-600 font-medium">Terpilih: {file.name}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Prescription Checkbox */}
+            <div className="md:col-span-2 flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <input
+                type="checkbox"
+                id="is_prescription_required"
+                name="is_prescription_required"
+                checked={form.is_prescription_required}
+                onChange={handleChange}
+                className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+              />
+              <label htmlFor="is_prescription_required" className="text-sm font-medium text-blue-800">
+                Produk ini memerlukan Resep Dokter
+              </label>
+            </div>
+
+            {/* Description */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Deskripsi Produk</label>
+              <textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                rows="3"
+                placeholder="Tuliskan detail indikasi, dosis, atau efek samping..."
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              ></textarea>
+            </div>
+          </div>
+        </form>
+
+        {/* Footer Actions */}
+        <div className="p-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-end bg-slate-50 rounded-b-2xl">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all order-2 sm:order-1"
+          >
+            Batal
+          </button>
+          <button
+            onClick={handleSubmit}
+            type="submit"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-md shadow-blue-200 transition-all order-1 sm:order-2"
+          >
+            {initialData ? "Simpan Perubahan" : "Tambah Produk"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

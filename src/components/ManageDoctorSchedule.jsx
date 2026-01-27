@@ -66,10 +66,12 @@ export default function ManageDoctorSchedule() {
       alert("Harap lengkapi bidang yang wajib diisi");
       return;
     }
-
+const token = localStorage.getItem('token')
     try {
       if (form.id) {
-        await axios.put(`${API_URL}/api/doctor-schedule/${form.id}`, form);
+        await axios.put(`${API_URL}/api/doctor-schedule/${form.id}`, form,{
+  headers: { Authorization: `Bearer ${token}` }
+});
       } else {
         await axios.post(`${API_URL}/api/doctor-schedule`, form);
       }
